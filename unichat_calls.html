@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UniChat - Calls</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] },
+                    colors: {
+                        unichat: {
+                            bg: '#020617', // Slate 950
+                            primary: '#3b82f6',
+                            card: 'rgba(30, 41, 59, 0.4)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #020617;
+            background: radial-gradient(circle at top right, #1e1b4b 0%, #020617 40%, #0f172a 100%);
+            background-attachment: fixed;
+            color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-header {
+            background: rgba(2, 6, 23, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-modal {
+            background: rgba(2, 6, 23, 0.95);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .scale-in { animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+        /* Shimmer Loading */
+        .shimmer {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+            background-size: 200% 100%;
+            animation: shimmerEffect 1.5s infinite;
+        }
+        @keyframes shimmerEffect { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Ripple Effect for calling */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid rgba(59, 130, 246, 0.5);
+            animation: rippleAnim 2s infinite ease-out;
+            inset: -10px;
+        }
+        .ripple:nth-child(2) { animation-delay: 0.5s; inset: -20px; border-width: 1px; border-color: rgba(59, 130, 246, 0.3); }
+        .ripple:nth-child(3) { animation-delay: 1s; inset: -30px; border-width: 1px; border-color: rgba(59, 130, 246, 0.1); }
+        
+        @keyframes rippleAnim {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .hide { display: none !important; }
+    </style>
+</head>
+<body class="min-h-screen relative overflow-x-hidden selection:bg-blue-500/30 flex justify-center">
+
+    <!-- Toast Notification -->
+    <div id="toast-container" class="fixed top-20 left-0 right-0 z-[60] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-3xl min-h-screen flex flex-col relative shadow-2xl">
+        
+        <!-- Top App Bar -->
+        <header class="fixed top-0 w-full max-w-3xl glass-header z-40 px-4 py-3 flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <button onclick="navigate('home.html')" class="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
+                        <i class="ph ph-arrow-left text-xl text-white"></i>
+                    </button>
+                    <h1 class="text-lg font-semibold text-white">Calls</h1>
+                </div>
+                <div class="flex items-center gap-1 sm:gap-2">
+                    <button class="p-2 rounded-full hover:bg-white/10 transition-colors">
+                        <i class="ph ph-magnifying-glass text-xl text-gray-300"></i>
+                    </button>
+                    <button class="p-2 rounded-full hover:bg-white/10 transition-colors">
+                        <i class="ph ph-dots-three-vertical text-xl text-gray-300"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Call Tabs -->
+            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                <button onclick="setTab('all')" id="tab-all" class="tab-btn px-5 py-1.5 rounded-full bg-blue-600 text-white text-sm font-medium whitespace-nowrap transition-colors">All Calls</button>
+                <button onclick="setTab('voice')" id="tab-voice" class="tab-btn px-5 py-1.5 rounded-full glass hover:bg-white/10 text-gray-300 text-sm font-medium whitespace-nowrap transition-colors">Voice</button>
+                <button onclick="setTab('video')" id="tab-video" class="tab-btn px-5 py-1.5 rounded-full glass hover:bg-white/10 text-gray-300 text-sm font-medium whitespace-nowrap transition-colors">Video</button>
+                <button onclick="setTab('missed')" id="tab-missed" class="tab-btn px-5 py-1.5 rounded-full glass hover:bg-white/10 text-gray-300 text-sm font-medium whitespace-nowrap transition-colors">Missed</button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="pt-[110px] pb-24 px-4 flex-1 overflow-y-auto">
+            
+            <div id="calls-container" class="flex flex-col gap-2 slide-up">
+                <!-- Skeleton Loading -->
+                <div class="flex items-center justify-between p-3 rounded-2xl glass mb-1">
+                    <div class="flex items-center gap-4 flex-1">
+                        <div class="w-12 h-12 rounded-full shimmer flex-shrink-0"></div>
+                        <div class="flex-1 w-full">
+                            <div class="w-24 h-4 rounded shimmer mb-2"></div>
+                            <div class="w-32 h-3 rounded shimmer"></div>
+                        </div>
+                    </div>
+                    <div class="w-8 h-8 rounded-full shimmer"></div>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-2xl glass mb-1">
+                    <div class="flex items-center gap-4 flex-1">
+                        <div class="w-12 h-12 rounded-full shimmer flex-shrink-0"></div>
+                        <div class="flex-1 w-full">
+                            <div class="w-32 h-4 rounded shimmer mb-2"></div>
+                            <div class="w-24 h-3 rounded shimmer"></div>
+                        </div>
+                    </div>
+                    <div class="w-8 h-8 rounded-full shimmer"></div>
+                </div>
+            </div>
+            
+            <!-- Empty State (Hidden by default) -->
+            <div id="empty-state" class="hide flex-col items-center justify-center py-20 text-center">
+                <div class="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mb-4">
+                    <i class="ph ph-phone-slash text-4xl text-blue-400"></i>
+                </div>
+                <h3 class="text-gray-200 font-medium text-lg">No calls yet</h3>
+                <p class="text-gray-500 text-sm mt-1 mb-6">Your call history will appear here.</p>
+                <button onclick="initiateCall('Random User', 'voice')" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-full transition-colors shadow-lg shadow-blue-500/20">
+                    Start a New Call
+                </button>
+            </div>
+
+        </main>
+
+        <!-- Floating Action Button -->
+        <button onclick="initiateCall('New Contact', 'voice')" class="fixed bottom-6 right-4 sm:right-auto sm:left-[calc(50%+16rem)] w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-900/50 hover:scale-105 active:scale-95 transition-all z-30 text-white">
+            <i class="ph ph-phone-plus text-2xl"></i>
+        </button>
+
+        <!-- ACTIVE CALL SCREEN (Overlay Modal) -->
+        <div id="call-screen" class="fixed inset-0 z-50 hide glass-modal flex flex-col justify-between">
+            
+            <!-- Top Controls -->
+            <div class="pt-12 px-6 flex justify-between items-center z-10 fade-in">
+                <button onclick="toggleCallScreen()" class="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md transition-colors">
+                    <i class="ph ph-caret-down text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full backdrop-blur-md text-white text-xs font-medium">
+                    <i class="ph ph-lock-key"></i> End-to-end encrypted
+                </div>
+                <button class="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md transition-colors">
+                    <i class="ph ph-user-plus text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Center Content (Profile & Status) -->
+            <div class="flex-1 flex flex-col items-center justify-center -mt-10 z-10 scale-in">
+                <div class="relative mb-6">
+                    <div class="ripple"></div>
+                    <div class="ripple"></div>
+                    <div class="ripple"></div>
+                    <img id="call-avatar" src="https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff&size=150" alt="Avatar" class="w-32 h-32 rounded-full object-cover border-4 border-gray-800 shadow-2xl relative z-10">
+                </div>
+                <h2 id="call-name" class="text-3xl font-semibold text-white tracking-wide mb-2">Aisha Sharma</h2>
+                <p id="call-status" class="text-blue-400 font-medium">Ringing...</p>
+                <p id="call-timer" class="text-gray-300 font-mono text-xl mt-2 hide">00:00</p>
+            </div>
+
+            <!-- Background Blur Layer -->
+            <div class="absolute inset-0 z-0 opacity-30">
+                <img id="call-bg" src="https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=1000&auto=format&fit=crop" class="w-full h-full object-cover filter blur-3xl">
+            </div>
+
+            <!-- Bottom Controls -->
+            <div class="pb-12 px-6 flex justify-center items-center gap-4 sm:gap-6 z-10 slide-up">
+                <button class="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md transition-colors toggle-btn">
+                    <i class="ph ph-speaker-high text-2xl"></i>
+                </button>
+                <button class="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md transition-colors toggle-btn">
+                    <i class="ph ph-video-camera-slash text-2xl"></i>
+                </button>
+                <button class="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white backdrop-blur-md transition-colors toggle-btn">
+                    <i class="ph ph-microphone-slash text-2xl"></i>
+                </button>
+                <button onclick="endCall()" class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white shadow-lg shadow-red-500/30 transform hover:scale-105 active:scale-95 transition-all">
+                    <i class="ph ph-phone-disconnect text-3xl"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase & App Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Config & Env
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'unichat-default-id';
+        const initToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Init Firebase
+        let app, auth, db, currentUser;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (error) {
+            console.error("Firebase init error:", error);
+        }
+
+        // State variables
+        let allCalls = [];
+        let currentActiveTab = 'all';
+        let activeCallTimer = null;
+        let activeCallSeconds = 0;
+        let currentCallData = null;
+
+        // --- UI Utils ---
+        window.navigate = (url) => { window.location.href = url; };
+        
+        const showToast = (message) => {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            toast.className = `flex items-center px-4 py-2.5 rounded-full border border-white/10 shadow-xl backdrop-blur-md bg-gray-800/90 text-white text-sm font-medium fade-in`;
+            toast.innerHTML = `<span>${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        };
+
+        // Tab Switching Logic
+        window.setTab = (tabId) => {
+            currentActiveTab = tabId;
+            
+            // Update UI
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.id === `tab-${tabId}`) {
+                    btn.className = "tab-btn px-5 py-1.5 rounded-full bg-blue-600 text-white text-sm font-medium whitespace-nowrap transition-colors";
+                } else {
+                    btn.className = "tab-btn px-5 py-1.5 rounded-full glass hover:bg-white/10 text-gray-300 text-sm font-medium whitespace-nowrap transition-colors";
+                }
+            });
+
+            renderFilteredCalls();
+        };
+
+        const formatDuration = (seconds) => {
+            if (!seconds) return '00:00';
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        };
+
+        const getRelativeTime = (isoString) => {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffInHours = (now - date) / (1000 * 60 * 60);
+            
+            if (diffInHours < 24 && date.getDate() === now.getDate()) {
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } else if (diffInHours < 48) {
+                return 'Yesterday';
+            } else {
+                return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            }
+        };
+
+        // Render Call List (Rule 2: Filter in Memory)
+        const renderFilteredCalls = () => {
+            const container = document.getElementById('calls-container');
+            const emptyState = document.getElementById('empty-state');
+            
+            let filtered = allCalls;
+            if (currentActiveTab !== 'all') {
+                filtered = allCalls.filter(call => {
+                    if (currentActiveTab === 'voice') return call.type === 'voice';
+                    if (currentActiveTab === 'video') return call.type === 'video';
+                    if (currentActiveTab === 'missed') return call.direction === 'missed';
+                    return true;
+                });
+            }
+
+            container.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hide');
+                emptyState.classList.add('flex');
+            } else {
+                emptyState.classList.add('hide');
+                emptyState.classList.remove('flex');
+                
+                filtered.forEach(call => {
+                    // Determine icons & colors
+                    let dirIcon = '';
+                    let colorClass = 'text-gray-400';
+                    let actionIcon = call.type === 'video' ? 'ph-video-camera' : 'ph-phone';
+                    
+                    if (call.direction === 'incoming') {
+                        dirIcon = '<i class="ph ph-arrow-down-left"></i>';
+                        colorClass = 'text-green-500';
+                    } else if (call.direction === 'outgoing') {
+                        dirIcon = '<i class="ph ph-arrow-up-right"></i>';
+                        colorClass = 'text-blue-500';
+                    } else {
+                        dirIcon = '<i class="ph ph-phone-x"></i>';
+                        colorClass = 'text-red-500';
+                    }
+
+                    const timeStr = getRelativeTime(call.timestamp);
+                    const durStr = call.duration ? formatDuration(call.duration) : 'No answer';
+                    
+                    const avatarUrl = call.peerPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(call.peerName)}&background=1e293b&color=3b82f6`;
+
+                    const html = `
+                        <div class="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl glass hover:bg-white/10 transition-colors group">
+                            <div class="flex items-center gap-3 sm:gap-4 cursor-pointer flex-1 min-w-0" onclick="navigate('profile.html')">
+                                <img src="${avatarUrl}" alt="${call.peerName}" class="w-12 h-12 rounded-full object-cover shadow-sm border border-white/10">
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="text-sm font-semibold ${call.direction === 'missed' ? 'text-red-400' : 'text-gray-100'} truncate group-hover:text-white transition-colors">${call.peerName}</h3>
+                                    <div class="flex items-center gap-1 mt-0.5">
+                                        <span class="text-xs ${colorClass}">${dirIcon}</span>
+                                        <span class="text-[11px] text-gray-400 truncate">${timeStr} • ${durStr}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="initiateCall('${call.peerName}', '${call.type}', '${avatarUrl}')" class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300 hover:text-blue-400 transition-colors shrink-0">
+                                <i class="ph ${actionIcon} text-xl"></i>
+                            </button>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', html);
+                });
+            }
+        };
+
+        // --- Call Screen Logic ---
+        
+        window.toggleCallScreen = () => {
+            const screen = document.getElementById('call-screen');
+            screen.classList.toggle('hide');
+        };
+
+        window.initiateCall = (peerName, type, peerPhoto = '') => {
+            const screen = document.getElementById('call-screen');
+            const avatar = document.getElementById('call-avatar');
+            const nameEl = document.getElementById('call-name');
+            const statusEl = document.getElementById('call-status');
+            const timerEl = document.getElementById('call-timer');
+            
+            // Set UI
+            nameEl.innerText = peerName;
+            avatar.src = peerPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(peerName)}&background=3b82f6&color=fff&size=150`;
+            statusEl.innerText = 'Calling...';
+            statusEl.classList.remove('hide');
+            timerEl.classList.add('hide');
+            timerEl.innerText = '00:00';
+            
+            // Show Screen
+            screen.classList.remove('hide');
+
+            // Setup active call data
+            currentCallData = {
+                peerName: peerName,
+                peerPhoto: peerPhoto,
+                type: type,
+                direction: 'outgoing', // Since we are initiating
+                timestamp: new Date().toISOString()
+            };
+
+            // Simulate connection after 2 seconds
+            setTimeout(() => {
+                if(!currentCallData) return; // user hung up early
+                statusEl.classList.add('hide');
+                timerEl.classList.remove('hide');
+                
+                activeCallSeconds = 0;
+                activeCallTimer = setInterval(() => {
+                    activeCallSeconds++;
+                    timerEl.innerText = formatDuration(activeCallSeconds);
+                }, 1000);
+                
+                showToast("Call Connected");
+            }, 2500);
+        };
+
+        window.endCall = async () => {
+            // Stop timer
+            if (activeCallTimer) {
+                clearInterval(activeCallTimer);
+                activeCallTimer = null;
+            }
+            
+            toggleCallScreen();
+            
+            if (currentCallData && currentUser) {
+                currentCallData.duration = activeCallSeconds;
+                
+                try {
+                    // Rule 1: Save to private path
+                    const callsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'call_history');
+                    await addDoc(callsRef, currentCallData);
+                    showToast("Call Ended");
+                } catch (e) {
+                    console.error("Error saving call:", e);
+                }
+            }
+            
+            // Reset
+            currentCallData = null;
+            activeCallSeconds = 0;
+        };
+
+        // Toggle buttons state styling
+        document.querySelectorAll('.toggle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.classList.toggle('bg-white/10');
+                btn.classList.toggle('bg-blue-500');
+                btn.classList.toggle('hover:bg-white/20');
+                btn.classList.toggle('hover:bg-blue-600');
+            });
+        });
+
+        // --- Firebase Integration (Strict Rules) ---
+
+        const listenToCalls = () => {
+            // Rule 1: Strict private data path
+            const callsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'call_history');
+            
+            onSnapshot(callsRef, (snapshot) => {
+                allCalls = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Rule 2: Sort in memory
+                allCalls.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                renderFilteredCalls();
+            }, (error) => {
+                console.error("Listen Error:", error);
+                showToast("Failed to sync calls.");
+            });
+        };
+
+        // Rule 3: Auth First Pipeline
+        const initAuth = async () => {
+            try {
+                if (initToken) await signInWithCustomToken(auth, initToken);
+                else await signInAnonymously(auth);
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUser = user;
+                        listenToCalls();
+                    } else {
+                        navigate('index.html');
+                    }
+                });
+            } catch (err) {
+                console.error("Auth Init Error:", err);
+                document.getElementById('calls-container').innerHTML = '<p class="text-red-400 text-sm text-center py-4">Failed to authenticate.</p>';
+            }
+        };
+
+        // Start App
+        initAuth();
+
+    </script>
+</body>
+</html>
