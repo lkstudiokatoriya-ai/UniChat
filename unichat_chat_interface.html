@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UniChat - Chat</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] },
+                    colors: {
+                        unichat: {
+                            bg: '#020617', // Slate 950
+                            primary: '#3b82f6',
+                            bubble: '#1e293b',
+                            bubbleUser: '#2563eb'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: #020617; /* Solid base fallback */
+            background: radial-gradient(circle at top right, #1e1b4b 0%, #020617 40%, #0f172a 100%);
+            color: #f8fafc;
+            overflow: hidden; /* Prevent body scrolling, use flex layout */
+        }
+
+        /* Glassmorphism */
+        .glass-header {
+            background: rgba(2, 6, 23, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .glass-footer {
+            background: rgba(2, 6, 23, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-menu {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.8);
+        }
+
+        /* Message Bubbles */
+        .msg-bubble {
+            max-width: 80%;
+            word-wrap: break-word;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
+            transform: scale(0.95);
+            transform-origin: bottom left;
+        }
+        .msg-bubble.self {
+            transform-origin: bottom right;
+        }
+
+        @keyframes popIn {
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Custom Scrollbar */
+        #chat-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        #chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #chat-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        /* Input specific styling */
+        .chat-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .chat-input:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(59, 130, 246, 0.5);
+            outline: none;
+        }
+
+        /* Typing Indicator */
+        .typing-dot {
+            animation: typingBounce 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        
+        /* Utility */
+        .hide { display: none !important; }
+    </style>
+</head>
+<body class="flex flex-col max-w-3xl mx-auto relative shadow-2xl">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg text-sm transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-4">
+        Notification
+    </div>
+
+    <!-- Top App Bar -->
+    <header class="glass-header w-full flex items-center justify-between px-2 sm:px-4 py-3 z-20 shrink-0">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <button onclick="navigate('home.html')" class="p-2 rounded-full hover:bg-white/10 transition-colors">
+                <i class="ph ph-arrow-left text-xl text-white"></i>
+            </button>
+            
+            <div class="flex items-center gap-3 cursor-pointer" onclick="navigate('profile.html')">
+                <div class="relative">
+                    <img src="https://ui-avatars.com/api/?name=Aisha+Sharma&background=ec4899&color=fff" alt="Profile" class="w-10 h-10 rounded-full object-cover border border-white/20">
+                    <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#020617] rounded-full"></div>
+                </div>
+                <div>
+                    <h2 class="text-sm font-semibold text-white leading-tight">Aisha Sharma</h2>
+                    <p class="text-xs text-green-400 font-medium">Online</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-1 sm:gap-2">
+            <button onclick="showToast('Starting voice call...')" class="p-2 rounded-full hover:bg-white/10 transition-colors">
+                <i class="ph ph-phone text-xl text-gray-300"></i>
+            </button>
+            <button onclick="showToast('Starting video call...')" class="p-2 rounded-full hover:bg-white/10 transition-colors">
+                <i class="ph ph-video-camera text-xl text-gray-300"></i>
+            </button>
+            <div class="relative">
+                <button id="menu-btn" class="p-2 rounded-full hover:bg-white/10 transition-colors">
+                    <i class="ph ph-dots-three-vertical text-xl text-gray-300"></i>
+                </button>
+                <!-- More Menu Dropdown -->
+                <div id="more-menu" class="absolute right-0 top-full mt-2 w-48 glass-menu rounded-xl py-2 hide z-50">
+                    <button onclick="navigate('profile.html')" class="w-full text-left px-4 py-2.5 text-sm text-gray-200 hover:bg-white/10 transition-colors flex items-center gap-3">
+                        <i class="ph ph-user"></i> View Profile
+                    </button>
+                    <button onclick="showToast('Search opened')" class="w-full text-left px-4 py-2.5 text-sm text-gray-200 hover:bg-white/10 transition-colors flex items-center gap-3">
+                        <i class="ph ph-magnifying-glass"></i> Search Chat
+                    </button>
+                    <div class="my-1 border-t border-white/10"></div>
+                    <button onclick="clearChat()" class="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-3">
+                        <i class="ph ph-trash"></i> Clear Chat
+                    </button>
+                    <button onclick="showToast('User Blocked')" class="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-3">
+                        <i class="ph ph-prohibit"></i> Block User
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Chat Area -->
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 relative">
+        
+        <!-- Date Divider -->
+        <div class="flex justify-center my-2">
+            <span class="px-3 py-1 bg-white/5 backdrop-blur-sm rounded-lg text-[10px] text-gray-400 font-medium">Today</span>
+        </div>
+
+        <!-- System Message -->
+        <div class="flex justify-center">
+            <span class="px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300 text-center max-w-[85%]">
+                <i class="ph ph-lock-key mr-1"></i> Messages are end-to-end encrypted. No one outside of this chat can read them.
+            </span>
+        </div>
+
+        <!-- Messages will be injected here -->
+        <div id="messages-list" class="flex flex-col gap-4">
+            <!-- Loading Indicator -->
+            <div id="loading-msgs" class="flex justify-center py-4">
+                <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Input Area -->
+    <footer class="glass-footer w-full px-2 sm:px-4 py-3 shrink-0 mb-safe">
+        <!-- Hidden file inputs -->
+        <input type="file" id="image-upload" accept="image/*" class="hide">
+        <input type="file" id="doc-upload" accept=".pdf,.doc,.docx,.txt" class="hide">
+
+        <form id="chat-form" class="flex items-end gap-2">
+            <!-- Attachment Buttons -->
+            <div class="flex items-center gap-1 mb-1 relative">
+                <button type="button" id="attach-btn" class="p-2 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors focus:outline-none">
+                    <i class="ph ph-plus text-xl"></i>
+                </button>
+                
+                <!-- Attachment Menu -->
+                <div id="attach-menu" class="absolute bottom-full left-0 mb-2 p-2 glass-menu rounded-2xl flex gap-2 hide z-50">
+                    <button type="button" onclick="document.getElementById('image-upload').click()" class="flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 hover:bg-purple-500 hover:text-white transition-colors">
+                        <i class="ph ph-image text-xl"></i>
+                    </button>
+                    <button type="button" onclick="document.getElementById('doc-upload').click()" class="flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white transition-colors">
+                        <i class="ph ph-file-text text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Text Input -->
+            <div class="flex-1 relative">
+                <input type="text" id="msg-input" placeholder="Message..." autocomplete="off"
+                       class="w-full chat-input rounded-2xl py-3 pl-4 pr-10 text-sm text-white placeholder-gray-400">
+                <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-yellow-400 transition-colors">
+                    <i class="ph ph-smiley text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Send / Mic Button -->
+            <button type="submit" id="send-btn" class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 transform transition-transform active:scale-95 shrink-0">
+                <i class="ph ph-microphone text-xl" id="send-icon"></i>
+            </button>
+        </form>
+    </footer>
+
+    <!-- Firebase & App Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        // Config & Env
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'unichat-default-id';
+        const initToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const demoChatId = 'demo_chat_room_1'; // Hardcoded for this demo 
+
+        // Init Firebase
+        let app, auth, db, storage, currentUser;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            storage = getStorage(app);
+        } catch (error) {
+            console.error("Firebase init error:", error);
+        }
+
+        // --- UI Interactions --- //
+        
+        const chatContainer = document.getElementById('chat-container');
+        const msgsList = document.getElementById('messages-list');
+        const msgInput = document.getElementById('msg-input');
+        const sendIcon = document.getElementById('send-icon');
+        const attachBtn = document.getElementById('attach-btn');
+        const attachMenu = document.getElementById('attach-menu');
+        const moreMenuBtn = document.getElementById('menu-btn');
+        const moreMenu = document.getElementById('more-menu');
+
+        window.navigate = (url) => { window.location.href = url; };
+        
+        window.showToast = (msg) => {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -1rem)';
+            }, 3000);
+        };
+
+        // Input morphing (Mic -> Send icon)
+        msgInput.addEventListener('input', (e) => {
+            if(e.target.value.trim().length > 0) {
+                sendIcon.classList.replace('ph-microphone', 'ph-paper-plane-right');
+                sendIcon.classList.add('text-white');
+            } else {
+                sendIcon.classList.replace('ph-paper-plane-right', 'ph-microphone');
+            }
+        });
+
+        // Toggle Menus
+        attachBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            attachMenu.classList.toggle('hide');
+            moreMenu.classList.add('hide');
+        });
+
+        moreMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            moreMenu.classList.toggle('hide');
+            attachMenu.classList.add('hide');
+        });
+
+        document.addEventListener('click', () => {
+            attachMenu.classList.add('hide');
+            moreMenu.classList.add('hide');
+        });
+
+        const scrollToBottom = () => {
+            setTimeout(() => {
+                chatContainer.scrollTo({
+                    top: chatContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 100);
+        };
+
+        // --- Core Firebase Logic --- //
+
+        // Rule 3: Auth first
+        const initAuth = async () => {
+            try {
+                if (initToken) await signInWithCustomToken(auth, initToken);
+                else await signInAnonymously(auth);
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUser = user;
+                        listenToMessages();
+                    } else {
+                        window.navigate('index.html');
+                    }
+                });
+            } catch (err) {
+                console.error("Auth Init Error:", err);
+                document.getElementById('loading-msgs').innerHTML = '<p class="text-red-400 text-sm">Failed to connect to chat.</p>';
+            }
+        };
+
+        // Render a single message bubble
+        const renderMessage = (msgData) => {
+            const isSelf = msgData.senderId === currentUser.uid;
+            const time = new Date(msgData.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            let contentHtml = '';
+            
+            if (msgData.type === 'text') {
+                // Escape HTML
+                const div = document.createElement('div');
+                div.innerText = msgData.text;
+                contentHtml = `<p class="text-[14px] leading-relaxed text-gray-100">${div.innerHTML}</p>`;
+            } 
+            else if (msgData.type === 'image') {
+                contentHtml = `
+                    <div class="relative rounded-lg overflow-hidden mb-1">
+                        <img src="${msgData.url}" class="max-w-full h-auto max-h-60 object-cover rounded-lg cursor-pointer" onclick="window.open(this.src)">
+                    </div>
+                    ${msgData.text ? `<p class="text-[14px] text-gray-100 mt-1">${msgData.text}</p>` : ''}
+                `;
+            }
+            else if (msgData.type === 'document') {
+                const fileName = msgData.fileName || 'Document';
+                contentHtml = `
+                    <a href="${msgData.url}" target="_blank" class="flex items-center gap-3 p-2 rounded-lg bg-black/20 hover:bg-black/30 transition-colors">
+                        <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                            <i class="ph ph-file-text text-xl"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-100 truncate">${fileName}</p>
+                            <p class="text-[10px] text-gray-400">PDF/Document</p>
+                        </div>
+                        <i class="ph ph-download-simple text-gray-400"></i>
+                    </a>
+                `;
+            }
+
+            const wrapperClass = isSelf ? 'flex justify-end' : 'flex justify-start';
+            const bubbleBg = isSelf ? 'bg-unichat-bubbleUser rounded-2xl rounded-tr-sm shadow-md' : 'bg-unichat-bubble border border-white/5 rounded-2xl rounded-tl-sm shadow-lg';
+            
+            // Status ticks for self
+            const statusTicks = isSelf ? `
+                <span class="text-blue-300 ml-1">
+                    <i class="ph-bold ph-checks text-[12px]"></i>
+                </span>
+            ` : '';
+
+            const html = `
+                <div class="${wrapperClass} msg-bubble ${isSelf ? 'self' : ''}">
+                    <div class="${bubbleBg} px-3.5 py-2.5 relative group">
+                        ${contentHtml}
+                        <div class="flex items-center justify-end gap-1 mt-1">
+                            <span class="text-[10px] text-gray-300/70 font-medium">${time}</span>
+                            ${statusTicks}
+                        </div>
+                    </div>
+                </div>
+            `;
+            return html;
+        };
+
+        // Listen for realtime updates (Rule 1 & Rule 2 compliant)
+        const listenToMessages = () => {
+            // Path: /artifacts/{appId}/public/data/chat_messages_{chatId}
+            const messagesRef = collection(db, 'artifacts', appId, 'public', 'data', `chat_messages_${demoChatId}`);
+            
+            // Note: NO orderBy or where clauses used. Fetching all and sorting in JS.
+            onSnapshot(messagesRef, (snapshot) => {
+                document.getElementById('loading-msgs')?.remove();
+                
+                // Sort in memory
+                const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                docs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                
+                msgsList.innerHTML = '';
+                
+                if (docs.length === 0) {
+                    // Inject a fake initial message for demo purposes if empty
+                    const fakeMsg = {
+                        senderId: 'bot',
+                        text: "Hey there! This is a demo chat room. Try sending a message or attaching a file.",
+                        type: 'text',
+                        timestamp: new Date().toISOString()
+                    };
+                    msgsList.innerHTML += renderMessage(fakeMsg);
+                } else {
+                    docs.forEach(docData => {
+                        msgsList.innerHTML += renderMessage(docData);
+                    });
+                }
+                
+                scrollToBottom();
+            }, (error) => {
+                console.error("Firestore Listen Error:", error);
+            });
+        };
+
+        // Send text message
+        document.getElementById('chat-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+            
+            const text = msgInput.value.trim();
+            if (!text) return; // Prevent empty submission
+
+            msgInput.value = ''; // Clear UI instantly
+            sendIcon.classList.replace('ph-paper-plane-right', 'ph-microphone');
+            sendIcon.classList.remove('text-white');
+
+            const payload = {
+                senderId: currentUser.uid,
+                text: text,
+                type: 'text',
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const messagesRef = collection(db, 'artifacts', appId, 'public', 'data', `chat_messages_${demoChatId}`);
+                await addDoc(messagesRef, payload);
+            } catch (error) {
+                console.error("Error sending msg:", error);
+                showToast("Failed to send");
+            }
+        });
+
+        // File Upload Handler (Image & Document)
+        const handleFileUpload = async (e, type) => {
+            const file = e.target.files[0];
+            if (!file || !currentUser) return;
+            e.target.value = ''; // Reset input
+            attachMenu.classList.add('hide');
+
+            showToast(`Uploading ${type}...`);
+            
+            // Storage Path
+            const fileName = `${Date.now()}_${file.name}`;
+            const storageRef = ref(storage, `artifacts/${appId}/public/data/chat_uploads/${fileName}`);
+
+            try {
+                const snapshot = await uploadBytesResumable(storageRef, file);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+
+                const payload = {
+                    senderId: currentUser.uid,
+                    type: type,
+                    url: downloadURL,
+                    fileName: file.name,
+                    timestamp: new Date().toISOString()
+                };
+
+                const messagesRef = collection(db, 'artifacts', appId, 'public', 'data', `chat_messages_${demoChatId}`);
+                await addDoc(messagesRef, payload);
+                showToast("Sent!");
+
+            } catch (error) {
+                console.error("Upload error:", error);
+                showToast("Upload failed.");
+            }
+        };
+
+        document.getElementById('image-upload').addEventListener('change', (e) => handleFileUpload(e, 'image'));
+        document.getElementById('doc-upload').addEventListener('change', (e) => handleFileUpload(e, 'document'));
+
+        // Clear Chat logic (Rule 2 compliant: read all, then delete iteratively)
+        window.clearChat = async () => {
+            if(!confirm("Are you sure you want to clear this chat?")) return;
+            moreMenu.classList.add('hide');
+            showToast("Clearing chat...");
+            
+            try {
+                const messagesRef = collection(db, 'artifacts', appId, 'public', 'data', `chat_messages_${demoChatId}`);
+                const snapshot = await getDocs(messagesRef);
+                const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `chat_messages_${demoChatId}`, d.id)));
+                await Promise.all(deletePromises);
+                showToast("Chat cleared.");
+            } catch(e) {
+                console.error("Clear error:", e);
+                showToast("Error clearing chat.");
+            }
+        };
+
+        // Bootstrap
+        initAuth();
+
+    </script>
+</body>
+</html>
