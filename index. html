@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniChat</title>
+
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+        }
+
+        body{
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+            background:#0f172a;
+            color:#ffffff;
+            font-family:Arial, sans-serif;
+        }
+
+        h1{
+            font-size:38px;
+            letter-spacing:1px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>UniChat</h1>
+
+    <script>
+        // Redirect to Login Page after 2 seconds
+        setTimeout(function () {
+            window.location.href = "login.html";
+        }, 2000);
+    </script>
+
+</body>
+</html>
