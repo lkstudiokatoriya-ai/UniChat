@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UniChat - Groups</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] },
+                    colors: {
+                        unichat: {
+                            bg: '#020617', // Slate 950
+                            primary: '#3b82f6',
+                            card: 'rgba(30, 41, 59, 0.4)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #020617;
+            background: radial-gradient(circle at top right, #1e1b4b 0%, #020617 40%, #0f172a 100%);
+            background-attachment: fixed;
+            color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-header {
+            background: rgba(2, 6, 23, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-modal {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #3b82f6;
+            outline: none;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Shimmer */
+        .shimmer {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+            background-size: 200% 100%;
+            animation: shimmerEffect 1.5s infinite;
+        }
+        @keyframes shimmerEffect { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Utilities */
+        .hide { display: none !important; }
+        .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+    </style>
+</head>
+<body class="min-h-screen relative overflow-x-hidden selection:bg-blue-500/30 flex justify-center">
+
+    <!-- Toast Notification -->
+    <div id="toast-container" class="fixed top-20 left-0 right-0 z-[60] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
+
+    <!-- Main Mobile Container -->
+    <div class="w-full max-w-3xl min-h-screen flex flex-col relative shadow-2xl">
+        
+        <!-- Top App Bar -->
+        <header class="fixed top-0 w-full max-w-3xl glass-header z-40 px-4 py-3">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <button onclick="navigate('home.html')" class="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
+                        <i class="ph ph-arrow-left text-xl text-white"></i>
+                    </button>
+                    <h1 class="text-lg font-semibold text-white">Groups</h1>
+                </div>
+                <div class="flex items-center gap-1 sm:gap-2">
+                    <button class="p-2 rounded-full hover:bg-white/10 transition-colors">
+                        <i class="ph ph-magnifying-glass text-xl text-gray-300"></i>
+                    </button>
+                    <button onclick="toggleModal('create-group-modal')" class="p-2 rounded-full hover:bg-white/10 transition-colors text-blue-400">
+                        <i class="ph ph-plus-circle text-2xl"></i>
+                    </button>
+                    <button class="p-2 rounded-full hover:bg-white/10 transition-colors">
+                        <i class="ph ph-dots-three-vertical text-xl text-gray-300"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="pt-20 pb-24 px-4 flex-1 overflow-y-auto">
+            
+            <!-- Category Filters -->
+            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-4 slide-up">
+                <button class="px-5 py-1.5 rounded-full bg-blue-600 text-white text-sm font-medium whitespace-nowrap">All Groups</button>
+                <button class="px-5 py-1.5 rounded-full glass hover:bg-white/10 text-gray-300 text-sm font-medium whitespace-nowrap transition-colors">Clubs</button>
+                <button class="px-5 py-1.5 rounded-full glass hover:bg-white/10 text-gray-300 text-sm font-medium whitespace-nowrap transition-colors">Classes</button>
+                <button class="px-5 py-1.5 rounded-full glass hover:bg-white/10 text-gray-300 text-sm font-medium whitespace-nowrap transition-colors">Study</button>
+            </div>
+
+            <!-- Group List -->
+            <div id="groups-container" class="flex flex-col gap-2 slide-up" style="animation-delay: 0.1s;">
+                <!-- Skeleton Loading -->
+                <div class="flex items-center gap-4 p-3 rounded-2xl glass mb-1">
+                    <div class="w-14 h-14 rounded-full shimmer flex-shrink-0"></div>
+                    <div class="flex-1 w-full">
+                        <div class="w-32 h-4 rounded shimmer mb-2"></div>
+                        <div class="w-3/4 h-3 rounded shimmer"></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-3 rounded-2xl glass mb-1">
+                    <div class="w-14 h-14 rounded-full shimmer flex-shrink-0"></div>
+                    <div class="flex-1 w-full">
+                        <div class="w-24 h-4 rounded shimmer mb-2"></div>
+                        <div class="w-1/2 h-3 rounded shimmer"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Empty State (Hidden by default) -->
+            <div id="empty-state" class="hide flex-col items-center justify-center py-16 text-center">
+                <div class="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mb-4">
+                    <i class="ph ph-users-three text-4xl text-blue-400"></i>
+                </div>
+                <h3 class="text-gray-200 font-medium text-lg">No groups yet</h3>
+                <p class="text-gray-500 text-sm mt-1 mb-6">Create a group to start collaborating.</p>
+                <button onclick="toggleModal('create-group-modal')" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-full transition-colors shadow-lg shadow-blue-500/20">
+                    Create New Group
+                </button>
+            </div>
+
+        </main>
+
+        <!-- Floating Action Button -->
+        <button onclick="toggleModal('create-group-modal')" class="fixed bottom-6 right-4 sm:right-auto sm:left-[calc(50%+16rem)] w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-900/50 hover:scale-105 active:scale-95 transition-all z-30">
+            <i class="ph ph-plus text-2xl text-white"></i>
+        </button>
+
+        <!-- CREATE GROUP MODAL (Overlay) -->
+        <div id="create-group-modal" class="fixed inset-0 z-50 hide">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="toggleModal('create-group-modal')"></div>
+            
+            <div class="absolute bottom-0 left-0 right-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:bottom-auto w-full sm:max-w-md bg-[#0f172a] sm:rounded-3xl rounded-t-3xl border border-white/10 shadow-2xl flex flex-col max-h-[90vh] slide-up">
+                
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-5 border-b border-white/10">
+                    <h2 class="text-lg font-semibold text-white">Create Group</h2>
+                    <button onclick="toggleModal('create-group-modal')" class="p-1.5 rounded-full hover:bg-white/10 transition-colors">
+                        <i class="ph ph-x text-xl text-gray-400 hover:text-white"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-5 overflow-y-auto">
+                    <form id="create-group-form" class="space-y-5">
+                        
+                        <!-- Group Photo -->
+                        <div class="flex flex-col items-center justify-center">
+                            <input type="file" id="group-photo-input" accept="image/*" class="hide" onchange="previewImage(this)">
+                            <div class="relative group cursor-pointer" onclick="document.getElementById('group-photo-input').click()">
+                                <div id="photo-preview" class="w-24 h-24 rounded-2xl glass-input flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-600 group-hover:border-blue-400 transition-colors">
+                                    <i class="ph ph-camera text-3xl text-gray-500 group-hover:text-blue-400" id="photo-icon"></i>
+                                    <img id="photo-img" src="" alt="Group" class="w-full h-full object-cover hide">
+                                </div>
+                                <div class="absolute -bottom-2 -right-2 bg-blue-600 rounded-full p-2 shadow-lg border-2 border-[#0f172a]">
+                                    <i class="ph ph-plus text-white text-sm"></i>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-3">Upload Group Photo</p>
+                        </div>
+
+                        <!-- Details -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1.5 ml-1">Group Name *</label>
+                            <input type="text" id="group-name" required placeholder="e.g. Physics Study Group" class="w-full rounded-xl glass-input px-4 py-3 text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1.5 ml-1">Description</label>
+                            <textarea id="group-desc" rows="2" placeholder="What is this group about?" class="w-full rounded-xl glass-input px-4 py-3 text-sm resize-none"></textarea>
+                        </div>
+                        
+                        <!-- Mock Add Members UI -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5 ml-1">
+                                <label class="text-xs font-medium text-gray-400">Add Members</label>
+                                <span class="text-[10px] text-blue-400">Selected: 3</span>
+                            </div>
+                            <div class="p-3 rounded-xl glass-input flex items-center gap-2 overflow-x-auto no-scrollbar">
+                                <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shrink-0 border-2 border-[#0f172a] shadow-md z-30">
+                                    <span class="text-xs font-bold text-white">You</span>
+                                </div>
+                                <img src="https://ui-avatars.com/api/?name=John&background=10b981&color=fff" class="w-10 h-10 rounded-full shrink-0 border-2 border-[#0f172a] shadow-md -ml-4 z-20">
+                                <img src="https://ui-avatars.com/api/?name=Sara&background=ec4899&color=fff" class="w-10 h-10 rounded-full shrink-0 border-2 border-[#0f172a] shadow-md -ml-4 z-10">
+                                <button type="button" class="w-10 h-10 rounded-full bg-white/5 border border-dashed border-white/20 flex items-center justify-center shrink-0 hover:bg-white/10 transition-colors ml-2">
+                                    <i class="ph ph-plus text-gray-400"></i>
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-gray-500 mt-1 text-center">Member selection is simulated for this demo.</p>
+                        </div>
+
+                        <button type="submit" id="btn-submit-group" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl py-3.5 mt-4 transition-transform transform active:scale-95 shadow-lg shadow-blue-900/50 flex justify-center items-center gap-2">
+                            <span>Create Group</span>
+                            <div id="btn-spinner" class="hide w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase & App Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        // Config & Env
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'unichat-default-id';
+        const initToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Init Firebase
+        let app, auth, db, storage, currentUser;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            storage = getStorage(app);
+        } catch (error) {
+            console.error("Firebase init error:", error);
+        }
+
+        // --- UI Globals ---
+        window.navigate = (url) => { window.location.href = url; };
+        
+        window.toggleModal = (id) => {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hide');
+        };
+
+        window.previewImage = (input) => {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('photo-img');
+                    img.src = e.target.result;
+                    img.classList.remove('hide');
+                    document.getElementById('photo-icon').classList.add('hide');
+                    document.getElementById('photo-preview').classList.remove('border-dashed', 'border-gray-600');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
+
+        const showToast = (message, isError = false) => {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = isError ? 'bg-red-500/90 border-red-400/50' : 'bg-blue-500/90 border-blue-400/50';
+            
+            toast.className = `flex items-center px-4 py-2.5 rounded-full border shadow-xl backdrop-blur-md text-white text-sm font-medium fade-in ${bgColor}`;
+            toast.innerHTML = `<span>${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        };
+
+        const setLoading = (isLoading) => {
+            const btnText = document.querySelector('#btn-submit-group span');
+            const spinner = document.getElementById('btn-spinner');
+            const btn = document.getElementById('btn-submit-group');
+            
+            if (isLoading) {
+                btnText.classList.add('hide');
+                spinner.classList.remove('hide');
+                btn.disabled = true;
+                btn.classList.add('opacity-80', 'cursor-not-allowed');
+            } else {
+                btnText.classList.remove('hide');
+                spinner.classList.add('hide');
+                btn.disabled = false;
+                btn.classList.remove('opacity-80', 'cursor-not-allowed');
+            }
+        };
+
+        // --- Firebase Logic ---
+
+        // Rule 3: Auth First
+        const initAuth = async () => {
+            try {
+                if (initToken) await signInWithCustomToken(auth, initToken);
+                else await signInAnonymously(auth);
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUser = user;
+                        listenToGroups();
+                    } else {
+                        // redirect to login if no user
+                        console.error("No authenticated user found.");
+                    }
+                });
+            } catch (err) {
+                console.error("Auth Init Error:", err);
+                showToast("Authentication failed", true);
+            }
+        };
+
+        // Render Group Card
+        const renderGroupCard = (group) => {
+            const time = new Date(group.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            // Generate default avatar if no photoURL
+            const avatarUrl = group.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(group.name)}&background=1e293b&color=3b82f6`;
+            
+            return `
+                <div onclick="navigate('group-chat.html?id=${group.id}')" class="flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl glass hover:bg-white/10 transition-colors cursor-pointer group-item">
+                    <div class="relative shrink-0">
+                        <img src="${avatarUrl}" alt="${group.name}" class="w-14 h-14 rounded-2xl object-cover shadow-md border border-white/10">
+                        <div class="absolute -bottom-1 -right-1 bg-[#0f172a] rounded-full p-0.5">
+                            <div class="bg-blue-500 rounded-full w-4 h-4 flex items-center justify-center">
+                                <i class="ph-fill ph-users text-[10px] text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0 flex flex-col justify-center">
+                        <div class="flex justify-between items-baseline mb-1">
+                            <h3 class="text-[15px] font-semibold text-gray-100 truncate pr-2 group-hover:text-blue-400 transition-colors">${group.name}</h3>
+                            <span class="text-[10px] text-gray-500 flex-shrink-0">${time}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <p class="text-xs text-gray-400 truncate pr-4 line-clamp-1">${group.description || 'Tap to view group details'}</p>
+                            ${group.isNew ? `<span class="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shrink-0">New</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        // Listen for realtime updates (Rule 1 & 2: Strict Path, No complex queries)
+        const listenToGroups = () => {
+            const groupsRef = collection(db, 'artifacts', appId, 'public', 'data', 'groups');
+            
+            onSnapshot(groupsRef, (snapshot) => {
+                const container = document.getElementById('groups-container');
+                const emptyState = document.getElementById('empty-state');
+                
+                const groups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Rule 2: Sort in memory
+                groups.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                
+                container.innerHTML = ''; // Clear loaders/old data
+                
+                if (groups.length === 0) {
+                    emptyState.classList.remove('hide');
+                    emptyState.classList.add('flex');
+                } else {
+                    emptyState.classList.add('hide');
+                    emptyState.classList.remove('flex');
+                    
+                    groups.forEach(group => {
+                        container.innerHTML += renderGroupCard(group);
+                    });
+                }
+            }, (error) => {
+                console.error("Firestore Listen Error:", error);
+                showToast("Error loading groups", true);
+            });
+        };
+
+        // Create Group Logic
+        document.getElementById('create-group-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            const name = document.getElementById('group-name').value.trim();
+            const desc = document.getElementById('group-desc').value.trim();
+            const photoFile = document.getElementById('group-photo-input').files[0];
+
+            setLoading(true);
+            let photoURL = null;
+
+            try {
+                // Upload image if provided
+                if (photoFile) {
+                    const fileName = `group_avatars/${Date.now()}_${photoFile.name}`;
+                    const storageRef = ref(storage, `artifacts/${appId}/public/data/${fileName}`);
+                    const uploadTask = await uploadBytesResumable(storageRef, photoFile);
+                    photoURL = await getDownloadURL(uploadTask.ref);
+                }
+
+                // Prepare Data
+                const groupData = {
+                    name: name,
+                    description: desc,
+                    photoURL: photoURL,
+                    createdBy: currentUser.uid,
+                    createdAt: new Date().toISOString(),
+                    members: [currentUser.uid], // Creator is default member
+                    isNew: true // Simple flag for UI
+                };
+
+                // Save to Firestore (Rule 1: Strict Public Path)
+                const groupsRef = collection(db, 'artifacts', appId, 'public', 'data', 'groups');
+                await addDoc(groupsRef, groupData);
+
+                showToast("Group created successfully!");
+                toggleModal('create-group-modal');
+                document.getElementById('create-group-form').reset();
+                
+                // Reset Image Preview
+                document.getElementById('photo-img').src = '';
+                document.getElementById('photo-img').classList.add('hide');
+                document.getElementById('photo-icon').classList.remove('hide');
+                document.getElementById('photo-preview').classList.add('border-dashed', 'border-gray-600');
+
+            } catch (error) {
+                console.error("Create group error:", error);
+                showToast("Failed to create group", true);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Bootstrap App
+        initAuth();
+
+    </script>
+</body>
+</html>
