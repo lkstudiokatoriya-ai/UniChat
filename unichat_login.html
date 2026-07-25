@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniChat - Student Messaging</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                    },
+                    colors: {
+                        unichat: {
+                            blue: '#3b82f6',
+                            dark: '#0f172a',
+                            glass: 'rgba(255, 255, 255, 0.05)',
+                            border: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #020617 0%, #1e1b4b 50%, #0f172a 100%);
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .glass-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Custom Scrollbar for Register Form */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* View Transitions */
+        .view-hidden {
+            display: none !important;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Toast Animation */
+        .toast-enter {
+            animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .toast-exit {
+            animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .btn-loading .spinner { display: inline-block; }
+        .btn-loading .btn-text { display: none; }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4 sm:p-6 text-gray-100 relative overflow-x-hidden">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3"></div>
+
+    <!-- Main Container -->
+    <div class="glass-card w-full max-w-md md:max-w-4xl rounded-3xl overflow-hidden relative">
+        
+        <!-- ================= LOGIN SECTION ================= -->
+        <div id="login-section" class="p-8 sm:p-12 md:max-w-md mx-auto w-full fade-in">
+            <div class="text-center mb-10">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 mb-4 shadow-lg shadow-blue-500/30">
+                    <i class="ph ph-chats-teardrop text-3xl text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">UniChat</h1>
+                <p class="text-gray-400 mt-2 text-sm">Connect with your campus community</p>
+            </div>
+
+            <form id="login-form" class="space-y-5">
+                <!-- Mobile Number -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1.5 ml-1">Mobile Number</label>
+                    <div class="flex">
+                        <span class="inline-flex items-center px-4 rounded-l-xl glass-input border-r-0 text-gray-400 font-medium">
+                            +91
+                        </span>
+                        <input type="tel" id="login-mobile" required pattern="[0-9]{10}" placeholder="Enter 10 digit number" 
+                               class="flex-1 w-full rounded-r-xl glass-input px-4 py-3 text-sm focus:ring-0">
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <div class="flex justify-between items-center mb-1.5 ml-1 mr-1">
+                        <label class="block text-sm font-medium text-gray-300">Password</label>
+                        <a href="#" class="text-xs text-blue-400 hover:text-blue-300 transition-colors">Forgot Password?</a>
+                    </div>
+                    <div class="relative">
+                        <i class="ph ph-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                        <input type="password" id="login-password" required placeholder="Enter your password" 
+                               class="w-full rounded-xl glass-input pl-11 pr-12 py-3 text-sm">
+                        <button type="button" onclick="togglePassword('login-password', 'login-eye-icon')" 
+                                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors focus:outline-none">
+                            <i id="login-eye-icon" class="ph ph-eye text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Login Button -->
+                <button type="submit" id="btn-login" 
+                        class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl py-3.5 transition-all transform hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-900/50 flex justify-center items-center gap-2 mt-6">
+                    <span class="btn-text">Login to UniChat</span>
+                    <div class="spinner"></div>
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="flex items-center my-6">
+                <div class="flex-1 border-t border-white/10"></div>
+                <span class="px-4 text-xs text-gray-500 font-medium">OR</span>
+                <div class="flex-1 border-t border-white/10"></div>
+            </div>
+
+            <!-- Google Login -->
+            <button id="btn-google" class="w-full glass-input hover:bg-white/5 text-white font-medium rounded-xl py-3.5 flex items-center justify-center gap-3 transition-all">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" class="w-5 h-5">
+                Continue with Google
+            </button>
+
+            <!-- Register Link -->
+            <p class="text-center mt-8 text-sm text-gray-400">
+                New to UniChat? 
+                <button onclick="switchView('register')" class="text-blue-400 font-semibold hover:text-blue-300 transition-colors ml-1 focus:outline-none">Create an account</button>
+            </p>
+        </div>
+
+        <!-- ================= REGISTER SECTION ================= -->
+        <div id="register-section" class="p-6 sm:p-10 w-full view-hidden max-h-[90vh] overflow-y-auto fade-in">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Create Account</h2>
+                    <p class="text-gray-400 text-sm mt-1">Join the ultimate student platform</p>
+                </div>
+                <button onclick="switchView('login')" class="p-2 rounded-full glass-input hover:bg-white/10 transition-colors focus:outline-none group">
+                    <i class="ph ph-x text-xl text-gray-400 group-hover:text-white"></i>
+                </button>
+            </div>
+
+            <form id="register-form" class="space-y-6">
+                <!-- Profile Photo Upload -->
+                <div class="flex flex-col items-center justify-center mb-6">
+                    <div class="relative group cursor-pointer" onclick="document.getElementById('reg-photo').click()">
+                        <div id="photo-preview" class="w-24 h-24 rounded-full glass-input flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-500 group-hover:border-blue-400 transition-colors">
+                            <i class="ph ph-camera text-3xl text-gray-500 group-hover:text-blue-400" id="photo-icon"></i>
+                            <img id="photo-img" src="" alt="Profile" class="w-full h-full object-cover hidden">
+                        </div>
+                        <div class="absolute bottom-0 right-0 bg-blue-600 rounded-full p-1.5 shadow-lg border-2 border-[#0f172a]">
+                            <i class="ph ph-plus text-white text-xs"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">Upload Profile Photo</p>
+                    <input type="file" id="reg-photo" accept="image/*" class="hidden" onchange="previewImage(this)">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <!-- Column 1 -->
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">Full Name *</label>
+                            <input type="text" id="reg-name" required class="w-full rounded-xl glass-input px-4 py-2.5 text-sm">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">Username * (unique)</label>
+                            <div class="relative">
+                                <i class="ph ph-at absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                                <input type="text" id="reg-username" required pattern="^[a-z0-9_.]{3,20}$" placeholder="john_doe" 
+                                       title="3-20 characters, lowercase letters, numbers, dot, or underscore"
+                                       class="w-full rounded-xl glass-input pl-9 pr-4 py-2.5 text-sm lowercase">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">Mobile Number *</label>
+                            <div class="flex">
+                                <span class="inline-flex items-center px-3 rounded-l-xl glass-input border-r-0 text-gray-500 text-sm">+91</span>
+                                <input type="tel" id="reg-mobile" required pattern="[0-9]{10}" class="flex-1 w-full rounded-r-xl glass-input px-3 py-2.5 text-sm focus:ring-0">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">Email (Optional)</label>
+                            <input type="email" id="reg-email" class="w-full rounded-xl glass-input px-4 py-2.5 text-sm">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">Date of Birth *</label>
+                                <input type="date" id="reg-dob" required class="w-full rounded-xl glass-input px-3 py-2.5 text-sm [color-scheme:dark]">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">Gender *</label>
+                                <select id="reg-gender" required class="w-full rounded-xl glass-input px-3 py-2.5 text-sm appearance-none">
+                                    <option value="" disabled selected>Select</option>
+                                    <option value="Male" class="bg-gray-800">Male</option>
+                                    <option value="Female" class="bg-gray-800">Female</option>
+                                    <option value="Other" class="bg-gray-800">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 2 -->
+                    <div class="space-y-5">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">State *</label>
+                                <input type="text" id="reg-state" required class="w-full rounded-xl glass-input px-4 py-2.5 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">District *</label>
+                                <input type="text" id="reg-district" required class="w-full rounded-xl glass-input px-4 py-2.5 text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">School / College Name *</label>
+                            <input type="text" id="reg-college" required class="w-full rounded-xl glass-input px-4 py-2.5 text-sm">
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="col-span-1">
+                                <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">Course *</label>
+                                <input type="text" id="reg-course" required placeholder="B.Tech, BA.." class="w-full rounded-xl glass-input px-3 py-2.5 text-sm">
+                            </div>
+                            <div class="col-span-1">
+                                <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">Branch *</label>
+                                <input type="text" id="reg-branch" required placeholder="CSE, Arts.." class="w-full rounded-xl glass-input px-3 py-2.5 text-sm">
+                            </div>
+                            <div class="col-span-1">
+                                <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">Sem/Class *</label>
+                                <input type="text" id="reg-sem" required placeholder="3rd, 12th.." class="w-full rounded-xl glass-input px-3 py-2.5 text-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">Password *</label>
+                            <div class="relative">
+                                <input type="password" id="reg-password" required minlength="6" class="w-full rounded-xl glass-input px-4 py-2.5 text-sm pr-10">
+                                <button type="button" onclick="togglePassword('reg-password', 'reg-eye1')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <i id="reg-eye1" class="ph ph-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">Confirm Password *</label>
+                            <div class="relative">
+                                <input type="password" id="reg-confirm" required minlength="6" class="w-full rounded-xl glass-input px-4 py-2.5 text-sm pr-10">
+                                <button type="button" onclick="togglePassword('reg-confirm', 'reg-eye2')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <i id="reg-eye2" class="ph ph-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Full Width -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1 ml-1">About Me (Bio)</label>
+                    <textarea id="reg-bio" rows="2" placeholder="Tell us a little about yourself..." class="w-full rounded-xl glass-input px-4 py-3 text-sm resize-none"></textarea>
+                </div>
+
+                <div class="flex items-start gap-3 mt-4">
+                    <input type="checkbox" id="reg-terms" required class="mt-1 w-4 h-4 rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-900 cursor-pointer">
+                    <label for="reg-terms" class="text-xs text-gray-400 cursor-pointer">
+                        I accept the <a href="#" class="text-blue-400 hover:underline">Terms & Conditions</a> and <a href="#" class="text-blue-400 hover:underline">Privacy Policy</a> of UniChat.
+                    </label>
+                </div>
+
+                <!-- Register Button -->
+                <button type="submit" id="btn-register" 
+                        class="w-full md:w-auto md:min-w-[200px] md:float-right bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl py-3 px-8 transition-all transform hover:scale-[1.02] active:scale-95 shadow-lg shadow-blue-900/50 flex justify-center items-center gap-2">
+                    <span class="btn-text">Create Account</span>
+                    <div class="spinner"></div>
+                </button>
+                <div class="clear-both"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase & Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        // Environment Variables
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'unichat-default-id';
+        const initToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Initialize Firebase
+        let app, auth, db, storage;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            storage = getStorage(app);
+        } catch (error) {
+            console.error("Firebase init error:", error);
+            showToast("System error: Unable to connect to database.", "error");
+        }
+
+        // --- Core Rules Implementation ---
+        // We MUST authenticate the environment connection first before making firestore queries.
+        const initEnvironmentAuth = async () => {
+            try {
+                if (initToken) {
+                    await signInWithCustomToken(auth, initToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Auth Init Error:", err);
+            }
+        };
+
+        // Call immediately to establish connection for username checking
+        initEnvironmentAuth();
+
+        // --- UI Interactions ---
+        window.switchView = (view) => {
+            const login = document.getElementById('login-section');
+            const register = document.getElementById('register-section');
+            
+            if (view === 'register') {
+                login.classList.add('view-hidden');
+                register.classList.remove('view-hidden');
+            } else {
+                register.classList.add('view-hidden');
+                login.classList.remove('view-hidden');
+            }
+        };
+
+        window.togglePassword = (inputId, iconId) => {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('ph-eye', 'ph-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('ph-eye-slash', 'ph-eye');
+            }
+        };
+
+        window.previewImage = (input) => {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('photo-img').src = e.target.result;
+                    document.getElementById('photo-img').classList.remove('hidden');
+                    document.getElementById('photo-icon').classList.add('hidden');
+                    document.getElementById('photo-preview').classList.remove('border-dashed');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
+
+        // --- Toast System ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500/20 border-green-500/50 text-green-100' : 'bg-red-500/20 border-red-500/50 text-red-100';
+            const icon = type === 'success' ? 'ph-check-circle text-green-400' : 'ph-warning-circle text-red-400';
+            
+            toast.className = `toast-enter flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-md shadow-lg ${bgColor}`;
+            toast.innerHTML = `<i class="ph ${icon} text-xl"></i><p class="text-sm font-medium">${message}</p>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.replace('toast-enter', 'toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function setLoading(btnId, isLoading) {
+            const btn = document.getElementById(btnId);
+            if (isLoading) {
+                btn.classList.add('btn-loading');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        // --- Registration Logic ---
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const password = document.getElementById('reg-password').value;
+            const confirm = document.getElementById('reg-confirm').value;
+            if (password !== confirm) {
+                showToast("Passwords do not match!", "error");
+                return;
+            }
+
+            const username = document.getElementById('reg-username').value.toLowerCase().trim();
+            const mobile = document.getElementById('reg-mobile').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            
+            setLoading('btn-register', true);
+
+            try {
+                // Rule 1: Check Username Uniqueness using public path 
+                // Uses document ID to avoid complex queries (Rule 2 compliant)
+                const usernameRef = doc(db, 'artifacts', appId, 'public', 'data', 'usernames', username);
+                const usernameDoc = await getDoc(usernameRef);
+                
+                if (usernameDoc.exists()) {
+                    showToast("Username is already taken. Please choose another.", "error");
+                    setLoading('btn-register', false);
+                    return;
+                }
+
+                // Phone Auth Workaround: Firebase Auth requires domain for email/password.
+                // We map the phone number to a pseudo-email for seamless authentication.
+                const authEmail = `${mobile}@unichat.com`;
+                
+                // Create User
+                const userCredential = await createUserWithEmailAndPassword(auth, authEmail, password);
+                const user = userCredential.user;
+                const userId = user.uid;
+
+                // Handle Photo Upload
+                let photoURL = "";
+                const photoFile = document.getElementById('reg-photo').files[0];
+                if (photoFile) {
+                    try {
+                        const storageRef = ref(storage, `artifacts/${appId}/users/${userId}/profile.jpg`);
+                        await uploadBytes(storageRef, photoFile);
+                        photoURL = await getDownloadURL(storageRef);
+                    } catch (uploadErr) {
+                        console.warn("Photo upload failed, continuing without photo.", uploadErr);
+                    }
+                }
+
+                // Prepare Profile Data
+                const profileData = {
+                    fullName: document.getElementById('reg-name').value.trim(),
+                    username: username,
+                    mobile: mobile,
+                    email: email,
+                    dob: document.getElementById('reg-dob').value,
+                    gender: document.getElementById('reg-gender').value,
+                    state: document.getElementById('reg-state').value.trim(),
+                    district: document.getElementById('reg-district').value.trim(),
+                    college: document.getElementById('reg-college').value.trim(),
+                    course: document.getElementById('reg-course').value.trim(),
+                    branch: document.getElementById('reg-branch').value.trim(),
+                    semester: document.getElementById('reg-sem').value.trim(),
+                    bio: document.getElementById('reg-bio').value.trim(),
+                    photoURL: photoURL,
+                    createdAt: new Date().toISOString()
+                };
+
+                // Rule 1: Save private user profile
+                const profileRef = doc(db, 'artifacts', appId, 'users', userId, 'profile', 'data');
+                await setDoc(profileRef, profileData);
+
+                // Rule 1: Reserve the username publicly
+                await setDoc(usernameRef, { uid: userId, timestamp: new Date().toISOString() });
+
+                showToast("Registration successful! Please login.");
+                document.getElementById('register-form').reset();
+                
+                // Reset Image
+                document.getElementById('photo-img').src = '';
+                document.getElementById('photo-img').classList.add('hidden');
+                document.getElementById('photo-icon').classList.remove('hidden');
+                document.getElementById('photo-preview').classList.add('border-dashed');
+
+                switchView('login');
+
+            } catch (error) {
+                console.error("Registration error:", error);
+                if (error.code === 'auth/email-already-in-use') {
+                    showToast("This mobile number is already registered.", "error");
+                } else {
+                    showToast(error.message || "An error occurred during registration.", "error");
+                }
+            } finally {
+                setLoading('btn-register', false);
+            }
+        });
+
+        // --- Login Logic ---
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const mobile = document.getElementById('login-mobile').value.trim();
+            const password = document.getElementById('login-password').value;
+            const authEmail = `${mobile}@unichat.com`;
+
+            setLoading('btn-login', true);
+
+            try {
+                await signInWithEmailAndPassword(auth, authEmail, password);
+                showToast("Login successful! Redirecting...");
+                
+                // Simulate redirect to home.html
+                setTimeout(() => {
+                    // window.location.href = 'home.html';
+                    showToast("Redirecting to Home...", "success");
+                    // Clearing input for visual completion in canvas
+                    document.getElementById('login-password').value = '';
+                }, 1000);
+
+            } catch (error) {
+                console.error("Login error:", error);
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    showToast("Invalid mobile number or password.", "error");
+                } else {
+                    showToast("Failed to log in. Please try again.", "error");
+                }
+            } finally {
+                setLoading('btn-login', false);
+            }
+        });
+
+        // --- Google Login ---
+        document.getElementById('btn-google').addEventListener('click', async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                const result = await signInWithPopup(auth, provider);
+                showToast(`Welcome ${result.user.displayName}! Redirecting...`);
+                // window.location.href = 'home.html';
+            } catch (error) {
+                console.error("Google Auth error:", error);
+                showToast("Google sign-in cancelled or failed.", "error");
+            }
+        });
+    </script>
+</body>
+</html>
