@@ -38,6 +38,31 @@
             window.location.href = "login.html";
         }, 2000);
     </script>
+    <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB1oI_mH7dKlSX2M1wynE_dDTT7TLFbVc4",
+  authDomain: "unichat-5b96d.firebaseapp.com",
+  databaseURL: "https://unichat-5b96d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "unichat-5b96d",
+  storageBucket: "unichat-5b96d.firebasestorage.app",
+  messagingSenderId: "37433406956",
+  appId: "1:37433406956:web:bd83559ebbd6d927e8bcc9",
+  measurementId: "G-36CLRFLKXN"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+console.log("Firebase Connected Successfully");
+
+// Splash screen redirect
+setTimeout(() => {
+  window.location.href = "login.html";
+}, 2000);
+    </script>
 
 </body>
 </html>
