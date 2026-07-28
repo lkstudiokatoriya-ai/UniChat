@@ -302,3 +302,180 @@ def register():
             "message": str(e)
 
         })
+
+# =====================================================
+# USER LOGIN
+# =====================================================
+
+@app.route("/login", methods=["POST"])
+def login():
+
+    try:
+
+        mobile = request.form.get("mobile")
+        password = request.form.get("password")
+
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(
+            "SELECT * FROM users WHERE mobile=%s",
+            (mobile,)
+        )
+
+        user = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if user is None:
+
+            return jsonify({
+
+                "success": False,
+
+                "message": "Mobile number not registered."
+
+            })
+
+        if not check_password_hash(
+            user["password"],
+            password
+        ):
+
+            return jsonify({
+
+                "success": False,
+
+                "message": "Wrong password."
+
+            })
+
+        session.permanent = True
+
+        session["user_id"] = user["id"]
+        session["name"] = user["name"]
+        session["username"] = user["username"]
+        session["mobile"] = user["mobile"]
+        session["photo"] = user["profile_photo"]
+
+        return jsonify({
+
+            "success": True,
+
+            "message": "Login Successful",
+
+            "redirect": "/dashboard"
+
+        })
+
+    except Exception as e:
+
+        return jsonify({
+
+            "success": False,
+
+            "message": str(e)
+
+        })
+
+
+# =====================================================
+# CHECK LOGIN
+# =====================================================
+
+@app.route("/check-login")
+def check_login():
+
+    if "user_id" in session:
+
+        return jsonify({
+
+            "logged_in": True,
+
+            "name": session["name"],
+
+            "username": session["username"],
+
+            "photo": session["photo"]
+
+        })
+
+    return jsonify({
+
+        "logged_in": False
+
+    })
+
+
+# =====================================================
+# DASHBOARD
+# =====================================================
+
+@app.route("/dashboard")
+def dashboard():
+
+    if "user_id" not in session:
+
+        return redirect("/login")
+
+    return render_template(
+
+        "dashboard.html",
+
+        name=session["name"],
+
+        username=session["username"],
+
+        photo=session["photo"]
+
+    )
+
+
+# =====================================================
+# LOGOUT
+# =====================================================
+
+@app.route("/logout")
+def logout():
+
+    session.clear()
+
+    return redirect("/login")
+
+
+# =====================================================
+# API STATUS
+# =====================================================
+
+@app.route("/api/status")
+def api_status():
+
+    return jsonify({
+
+        "status": "running",
+
+        "backend": "Python Flask",
+
+        "database": "MySQL",
+
+        "project": "POLYTECHNIC HUB"
+
+    })
+
+
+# =====================================================
+# START SERVER
+# =====================================================
+
+if __name__ == "__main__":
+
+    app.run(
+
+        debug=True,
+
+        host="0.0.0.0",
+
+        port=5000
+
+    )
