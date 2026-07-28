@@ -428,40 +428,155 @@ const API_URL = "http://127.0.0.1:5000";
                 btn.disabled = false;
             }
         }
+           // ================= REGISTER WITH FLASK =================
 
-        // --- Registration Logic ---
-        document.getElementById('register-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const password = document.getElementById('reg-password').value;
-            const confirm = document.getElementById('reg-confirm').value;
-            if (password !== confirm) {
-                showToast("Passwords do not match!", "error");
-                return;
-            }
+document.getElementById("register-form").addEventListener("submit", async function (e) {
 
-            const username = document.getElementById('reg-username').value.toLowerCase().trim();
-            const mobile = document.getElementById('reg-mobile').value.trim();
-            const email = document.getElementById('reg-email').value.trim();
-            
-            setLoading('btn-register', true);
+    e.preventDefault();
 
-            try {
-                // Rule 1: Check Username Uniqueness using public path 
-                // Uses document ID to avoid complex queries (Rule 2 compliant)
-                const usernameRef = doc(db, 'artifacts', appId, 'public', 'data', 'usernames', username);
-                const usernameDoc = await getDoc(usernameRef);
-                
-                if (usernameDoc.exists()) {
-                    showToast("Username is already taken. Please choose another.", "error");
-                    setLoading('btn-register', false);
-                    return;
-                }
+    const password = document.getElementById("reg-password").value;
+    const confirm = document.getElementById("reg-confirm").value;
 
-                // Phone Auth Workaround: Firebase Auth requires domain for email/password.
-                // We map the phone number to a pseudo-email for seamless authentication.
-                const authEmail = `${mobile}@unichat.com`;
+    if (password !== confirm) {
+        showToast("Passwords do not match!", "error");
+        return;
+    }
+
+    setLoading("btn-register", true);
+
+    const formData = new FormData();
+
+    formData.append("name", document.getElementById("reg-name").value.trim());
+    formData.append("username", document.getElementById("reg-username").value.trim().toLowerCase());
+    formData.append("mobile", document.getElementById("reg-mobile").value.trim());
+    formData.append("email", document.getElementById("reg-email").value.trim());
+    formData.append("dob", document.getElementById("reg-dob").value);
+    formData.append("gender", document.getElementById("reg-gender").value);
+    formData.append("state", document.getElementById("reg-state").value.trim());
+    formData.append("district", document.getElementById("reg-district").value.trim());
+    formData.append("college", document.getElementById("reg-college").value.trim());
+    formData.append("course", document.getElementById("reg-course").value.trim());
+    formData.append("branch", document.getElementById("reg-branch").value.trim());
+    formData.append("semester", document.getElementById("reg-sem").value.trim());
+    formData.append("bio", document.getElementById("reg-bio").value.trim());
+    formData.append("password", password);
+
+    const photo = document.getElementById("reg-photo").files[0];
+
+    if (photo) {
+        formData.append("photo", photo);
+    }
+
+    try {
+
+        const response = await fetch("/register", {
+
+            method: "POST",
+
+            body: formData
+
         });
+
+        const result = await response.json();
+
+        if (result.success) {
+
+            showToast(result.message, "success");
+
+            document.getElementById("register-form").reset();
+
+            document.getElementById("photo-img").src = "";
+            document.getElementById("photo-img").classList.add("hidden");
+
+            document.getElementById("photo-icon").classList.remove("hidden");
+
+            document.getElementById("photo-preview").classList.add("border-dashed");
+
+            switchView("login");
+
+        } else {
+
+            showToast(result.message, "error");
+
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast("Server Error", "error");
+
+    } finally {
+
+        setLoading("btn-register", false);
+
+    }
+
+});
+           // ================= LOGIN WITH FLASK =================
+
+document.getElementById("login-form").addEventListener("submit", async function (e) {
+
+    e.preventDefault();
+
+    setLoading("btn-login", true);
+
+    const formData = new FormData();
+
+    formData.append(
+        "mobile",
+        document.getElementById("login-mobile").value.trim()
+    );
+
+    formData.append(
+        "password",
+        document.getElementById("login-password").value
+    );
+
+    try {
+
+        const response = await fetch(API_URL + "/login", {
+
+            method: "POST",
+
+            body: formData,
+            credentials: "include"
+
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+
+            showToast(result.message, "success");
+
+            setTimeout(() => {
+
+                window.location.href = result.redirect;
+
+            }, 800);
+
+        } else {
+
+            showToast(result.message, "error");
+
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast("Unable to connect to server.", "error");
+
+    } finally {
+
+        setLoading("btn-login", false);
+
+    }
+
+});
+
+        
     </script>
 </body>
 </html>
