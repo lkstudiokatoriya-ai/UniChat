@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import timedelta
-import mysql.connector
+import sqlite3
 import os
 import uuid
 
@@ -32,21 +32,18 @@ ALLOWED_EXTENSIONS = {
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
 # =====================================================
-# MySQL Configuration
+# SQLite Configuration
 # =====================================================
 
-db_config = {
-    "host": "localhost",
-    "user": "root",
-    "password": "",
-    "database": "polytechnic_hub"
-}
+import sqlite3
+
+DATABASE = "polytechnic_hub.db"
 
 def get_db():
-    return mysql.connector.connect(**db_config)
-
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
 # =====================================================
 # Image Validation
 # =====================================================
